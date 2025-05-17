@@ -45,16 +45,3 @@ python main.py
 - OpenCV
 - NumPy
 
-## Project Structure
-
-```
-.
-├── main.py                 # Main application
-├── image_processors/       # Image processing modules
-│   ├── base_processor.py   # Base processor class
-│   ├── processor_factory.py # Processor factory
-│   └── processors/         # Individual processors
-│       ├── rotation_processor.py
-│       └── crop_processor.py
-└── environment.yml         # Conda environment file
-```
