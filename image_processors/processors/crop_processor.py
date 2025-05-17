@@ -46,4 +46,4 @@ class CropProcessor(BaseProcessor):
         return [self.controls_widget]
         
     def get_name(self):
-        return "Crop" 
+        return "Crop"
