@@ -32,4 +32,4 @@ class RotationProcessor(BaseProcessor):
         return [self.degree_input]
         
     def get_name(self):
-        return "Rotation" 
+        return "Rotation"
