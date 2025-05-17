@@ -15,7 +15,7 @@ A simple image processing application built with PyQt6 and OpenCV.
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/Jura69/Pyqt6_ImgProcess.git
 cd PyQt6-Project
 ```
 
