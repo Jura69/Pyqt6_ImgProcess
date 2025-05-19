@@ -27,12 +27,14 @@ conda activate pyqt6_app
 
 ## Usage
 
-1. Run the application:
+1. Make sure you are in the project root directory (where the `src` folder is located)
+
+2. Run the application:
 ```bash
-python main.py
+python src/main.py
 ```
 
-2. Use the interface:
+3. Use the interface:
    - Click "Upload Image" to select an image
    - Choose a transformation from the dropdown
    - Adjust parameters using the controls
