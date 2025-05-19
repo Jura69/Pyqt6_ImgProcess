@@ -7,3 +7,7 @@ class CropController(BaseController):
         models = CropModel()
         views = CropView()
         super().__init__(models, views) 
+
+    def _connect_signals(self):
+        super()._connect_signals()
+        self.views.parameters_changed.connect(self.models.set_parameters)

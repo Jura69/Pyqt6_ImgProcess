@@ -16,7 +16,7 @@ class MainWindow(QMainWindow):
         self.original_image = None
         self.processed_image = None
         self.current_processor = None
-        self.current_controls = None
+        self.current_views = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -58,15 +58,15 @@ class MainWindow(QMainWindow):
         self.upload_button = QPushButton("Upload Image")
         self.upload_button.clicked.connect(self._on_upload_clicked)
         layout.addWidget(self.upload_button)
-        # Chọn process
+        # Chọn processor
         self.processor_combo = QComboBox()
         self.processor_combo.addItems(["Select Transformation"] + list(self.processor_controllers.keys()))
         self.processor_combo.currentTextChanged.connect(self._on_processor_changed)
         layout.addWidget(self.processor_combo)
-        # Vùng chứa controls động để hiện thị khi chọn process
-        self.controls_container = QWidget()
-        self.controls_layout = QVBoxLayout(self.controls_container)
-        layout.addWidget(self.controls_container)
+        # Vùng chứa views động
+        self.views_container = QWidget()
+        self.views_layout = QVBoxLayout(self.views_container)
+        layout.addWidget(self.views_container)
         # Thông báo lỗi
         self.error_message = ErrorMessage()
         layout.addWidget(self.error_message)
@@ -90,22 +90,22 @@ class MainWindow(QMainWindow):
             self.error_message.clear_message()
 
     def _on_processor_changed(self, name: str):
-        # Xoá controls cũ
-        while self.controls_layout.count():
-            item = self.controls_layout.takeAt(0)
+        # Xoá views cũ
+        while self.views_layout.count():
+            item = self.views_layout.takeAt(0)
             widget = item.widget()
             if widget:
                 widget.deleteLater()
         # Nếu chưa chọn processor
         if name == "Select Transformation":
             self.current_processor = None
-            self.current_controls = None
+            self.current_views = None
             return
         try:
             controller = self.processor_controllers[name]
-            self.current_processor = controller.get_processor()
-            self.current_controls = controller.get_controls()
-            self.controls_layout.addWidget(self.current_controls)
+            self.current_processor = controller.get_models()
+            self.current_views = controller.get_views()
+            self.views_layout.addWidget(self.current_views)
         except KeyError as e:
             print(f"Error creating processor: {e}")
 
