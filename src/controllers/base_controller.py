@@ -1,3 +1,4 @@
+# type: ignore
 from PyQt6.QtWidgets import QWidget
 
 class BaseController:
