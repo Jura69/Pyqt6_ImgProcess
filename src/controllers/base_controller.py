@@ -1,17 +1,17 @@
 from PyQt6.QtWidgets import QWidget
 
 class BaseController:
-    def __init__(self, processor, controls):
-        self.processor = processor
-        self.controls = controls
+    def __init__(self, models, views):
+        self.models = models
+        self.views = views
         self._connect_signals()
 
     def _connect_signals(self):
-        if hasattr(self.controls, "parameters_changed"):
-            self.controls.parameters_changed.connect(self.processor.set_parameters)
+        if hasattr(self.views, "parameters_changed"):
+            self.views.parameters_changed.connect(self.models.set_parameters)
 
-    def get_processor(self):
-        return self.processor
+    def get_models(self):
+        return self.models
 
-    def get_controls(self):
-        return self.controls 
+    def get_views(self):
+        return self.views 

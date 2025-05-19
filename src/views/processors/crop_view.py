@@ -2,7 +2,6 @@ from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QVBoxLayout, QLabel
 from PyQt6.QtCore import pyqtSignal
 
 class CropView(QWidget):
-    """Controls for crop processor"""
     parameters_changed = pyqtSignal(dict)
     
     def __init__(self):
@@ -23,7 +22,6 @@ class CropView(QWidget):
         self.end_x_input = QLineEdit()
         self.end_x_input.setPlaceholderText("End X")
         
-        # Connect signals
         for input_field in [self.start_y_input, self.end_y_input, 
                           self.start_x_input, self.end_x_input]:
             input_field.textChanged.connect(self._on_parameter_changed)

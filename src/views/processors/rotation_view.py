@@ -2,9 +2,6 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox,
 from PyQt6.QtCore import pyqtSignal
 
 class RotationView(QWidget):
-    """Controls for rotation processor"""
-    
-    # Signals
     parameters_changed = pyqtSignal(dict)
     rotation_type_changed = pyqtSignal(str)
     
@@ -41,12 +38,10 @@ class RotationView(QWidget):
         self.setLayout(layout)
         
     def _on_type_changed(self, rotation_type: str):
-        """Handle rotation type change"""
         self.rotation_type_changed.emit(rotation_type.lower())
         self._on_parameters_changed()
         
     def _on_parameters_changed(self):
-        """Handle parameter changes"""
         params = {
             "degree": self.degree_spin.value()
         }
