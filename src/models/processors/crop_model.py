@@ -1,6 +1,6 @@
-import cv2
 import numpy as np
 from models.base_model import BaseModel
+from utils.imageScaling_ultil import image_scaling
 
 class CropModel(BaseModel):
     def __init__(self):
@@ -22,21 +22,12 @@ class CropModel(BaseModel):
         if end_y <= start_y or end_x <= start_x:
             return image
 
+        # Cắt vùng ảnh
         crop = image[start_y:end_y, start_x:end_x]
-        crop_h, crop_w = crop.shape[:2]
-        # Tính hệ số scale lớn nhất mà không vượt quá frame gốc
-        scale = min(h / crop_h, w / crop_w)
-        new_w = int(crop_w * scale)
-        new_h = int(crop_h * scale)
-        # Scale vùng crop
-        crop_scaled = cv2.resize(crop, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
-        # Tạo ảnh đen cùng kích thước gốc
-        result = np.zeros_like(image)
-        # Tính vị trí để dán crop vào giữa
-        y_offset = (h - new_h) // 2
-        x_offset = (w - new_w) // 2
-        result[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = crop_scaled
-        return result
+        
+        # Scale vùng crop ra tối đa 650x650, giữ nguyên tỉ lệ
+        crop_scaled = image_scaling(crop, max_width=650, max_height=650)
+        return crop_scaled
     
     def get_name(self) -> str:
         return "Crop"

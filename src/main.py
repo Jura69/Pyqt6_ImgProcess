@@ -7,13 +7,11 @@ from views.main_window import MainWindow
 def main():
     app = QApplication(sys.argv)
     
-    # Create a mapping of processor names to their controllers
     processor_controllers = {
         "Rotation": RotationController(),
         "Crop": CropController()
     }
     
-    # Create and show main window
     window = MainWindow(processor_controllers)
     window.show()
     

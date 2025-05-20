@@ -1,10 +1,10 @@
 import numpy as np
 import cv2
 
-def image_scaling(image, max_width=600, max_height=600):
+def image_scaling(image, max_width=650, max_height=650):
     h, w = image.shape[:2]
-    scaleX = min(1, max_width / w)
-    scaleY = min(1, max_height / h)
+    scaleX = max_width / w
+    scaleY = max_height / h
     scale = min(scaleX, scaleY)
     if scale == 1:
         return image  # Không cần scale
