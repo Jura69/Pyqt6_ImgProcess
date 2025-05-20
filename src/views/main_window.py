@@ -21,34 +21,44 @@ class MainWindow(QMainWindow):
 
     def _setup_ui(self):
         self.setWindowTitle("Image Processor")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setGeometry(100, 100, 1800, 700)
+        self.setFixedSize(1800, 700)  
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QHBoxLayout(main_widget)
-        # Khung hiển thị ảnh gốc
-        self.original_frame = self._create_image_frame("Original Image")
-        # Khung hiển thị ảnh đã xử lý
-        self.processed_frame = self._create_image_frame("Processed Image")
+        # Khung hiển thị ảnh gốc và label ảnh gốc
+        self.original_frame, self.original_image_label = self._create_image_frame("Original Image")
+        # Khung hiển thị ảnh đã xử lý và label ảnh kết quả
+        self.processed_frame, self.processed_image_label = self._create_image_frame("Processed Image")
         # Panel điều khiển
         control_panel = self._create_control_panel()
         main_layout.addWidget(self.original_frame)
         main_layout.addWidget(control_panel)
         main_layout.addWidget(self.processed_frame)
 
-    def _create_image_frame(self, title: str) -> QFrame:
+    def _create_image_frame(self, title: str):
         frame = QFrame()
         frame.setFrameStyle(QFrame.Shape.StyledPanel)
         frame.setMinimumSize(400, 400)
         frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        layout = QVBoxLayout(frame)
+
+        main_layout = QVBoxLayout(frame)
         label = QLabel(title)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(label)
+        main_layout.addWidget(label)
+
+        image_widget = QWidget()
+        image_layout = QVBoxLayout(image_widget)
+        image_layout.setContentsMargins(0, 0, 0, 0)
         image_label = QLabel()
         image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         image_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        layout.addWidget(image_label)
-        return frame
+        image_layout.addStretch(1)
+        image_layout.addWidget(image_label)
+        image_layout.addStretch(1)
+        main_layout.addWidget(image_widget, stretch=1)
+
+        return frame, image_label
 
     def _create_control_panel(self) -> QWidget:
         panel = QWidget()
@@ -83,10 +93,10 @@ class MainWindow(QMainWindow):
             "Image Files (*.png *.jpg *.jpeg *.bmp *.gif)")
         if file_name:
             img = cv2.imread(file_name)
-            img = image_scaling(img, max_width=400, max_height=400)
+            img = image_scaling(img, max_width=650, max_height=650)
             self.original_image = img
             self.image_height, self.image_width = img.shape[:2]
-            self._display_image(self.original_image, self.original_frame)
+            self._display_image(self.original_image, self.original_image_label)
             self.error_message.clear_message()
 
     def _on_processor_changed(self, name: str):
@@ -110,36 +120,22 @@ class MainWindow(QMainWindow):
             print(f"Error creating processor: {e}")
 
     def _on_process_clicked(self):
-        # Kiểm tra đã upload ảnh chưa
         if self.original_image is None:
             self.error_message.show_message("Vui lòng upload ảnh đầu vào trước!")
             return
-        # Kiểm tra đã chọn processor chưa
         if self.current_processor is None:
             self.error_message.show_message("Vui lòng chọn bộ xử lý!")
             return
         self.error_message.clear_message()
         self.processed_image = self.current_processor.process(self.original_image)
-        self._display_image(self.processed_image, self.processed_frame)
+        self._display_image(self.processed_image, self.processed_image_label)
 
-    def _display_image(self, image: np.ndarray, frame: QFrame):
+    def _display_image(self, image: np.ndarray, image_label: QLabel):
         if image is None:
             return
-        # Lấy kích thước ảnh gốc
-        if hasattr(self, "image_height") and hasattr(self, "image_width"):
-            height, width = self.image_height, self.image_width
-        else:
-            height, width = image.shape[:2]
-        # Cắt ảnh nếu lớn hơn frame
-        image = image[:height, :width]
-        # Chuyển BGR -> RGB
+        height, width = image.shape[:2]
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         qt_image = QImage(rgb_image.tobytes(), width, height, 3 * width, QImage.Format.Format_RGB888)
         pixmap = QPixmap.fromImage(qt_image)
-        # Hiển thị ảnh lên QLabel
-        for i in range(frame.layout().count()):
-            widget = frame.layout().itemAt(i).widget()
-            if isinstance(widget, QLabel) and (widget.pixmap() is not None or widget.text() == ""):
-                widget.setFixedSize(width, height)
-                widget.setPixmap(pixmap)
-                break 
+        image_label.setFixedSize(width, height)
+        image_label.setPixmap(pixmap) 
