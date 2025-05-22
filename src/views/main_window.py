@@ -121,10 +121,10 @@ class MainWindow(QMainWindow):
 
     def _on_process_clicked(self):
         if self.original_image is None:
-            self.error_message.show_message("Vui lòng upload ảnh đầu vào trước!")
+            self.error_message.show_message("Please upload an input image first!")
             return
         if self.current_processor is None:
-            self.error_message.show_message("Vui lòng chọn bộ xử lý!")
+            self.error_message.show_message("Please select a processor!")
             return
         self.error_message.clear_message()
         self.processed_image = self.current_processor.process(self.original_image)
