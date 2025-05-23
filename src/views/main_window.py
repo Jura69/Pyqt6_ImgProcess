@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 from utils.imageScaling_ultil import image_scaling
 from views.components.error_message import ErrorMessage
+from views.components.sucess_message import SucessMessage
 
 class MainWindow(QMainWindow):
     def __init__(self, processor_controllers):
@@ -80,10 +81,18 @@ class MainWindow(QMainWindow):
         # Thông báo lỗi
         self.error_message = ErrorMessage()
         layout.addWidget(self.error_message)
+        # Thông báo thành công
+        self.sucess_message = SucessMessage()
+        layout.addWidget(self.sucess_message)
         # Nút xử lý ảnh
         self.process_button = QPushButton("Process Image")
         self.process_button.clicked.connect(self._on_process_clicked)
         layout.addWidget(self.process_button)
+        # Nút lưu ảnh
+        self.save_button = QPushButton("Save Processed Image")
+        self.save_button.clicked.connect(self._on_save_clicked)
+        self.save_button.setEnabled(False) 
+        layout.addWidget(self.save_button)
         layout.addStretch()
         return panel
 
@@ -93,11 +102,13 @@ class MainWindow(QMainWindow):
             "Image Files (*.png *.jpg *.jpeg *.bmp *.gif)")
         if file_name:
             img = cv2.imread(file_name)
-            img = image_scaling(img, max_width=650, max_height=650)
             self.original_image = img
             self.image_height, self.image_width = img.shape[:2]
-            self._display_image(self.original_image, self.original_image_label)
+            # Scale ảnh để hiển thị
+            display_img = image_scaling(img, max_width=650, max_height=650)
+            self._display_image(display_img, self.original_image_label)
             self.error_message.clear_message()
+            self.save_button.setEnabled(False)  
 
     def _on_processor_changed(self, name: str):
         # Xoá views cũ
@@ -121,14 +132,31 @@ class MainWindow(QMainWindow):
 
     def _on_process_clicked(self):
         if self.original_image is None:
-            self.error_message.show_message("Please upload an input image first!")
+            self.error_message.show_message("Vui lòng upload ảnh đầu vào trước!")
             return
         if self.current_processor is None:
-            self.error_message.show_message("Please select a processor!")
+            self.error_message.show_message("Vui lòng chọn bộ xử lý!")
             return
         self.error_message.clear_message()
         self.processed_image = self.current_processor.process(self.original_image)
-        self._display_image(self.processed_image, self.processed_image_label)
+        # Scale ảnh để hiển thị
+        display_img = image_scaling(self.processed_image, max_width=650, max_height=650)
+        self._display_image(display_img, self.processed_image_label)
+        self.save_button.setEnabled(True)  # Enable save button after processing
+
+    def _on_save_clicked(self):
+        if self.processed_image is None:
+            self.error_message.show_message("Không có ảnh đã xử lý để lưu!")
+            return
+        
+        file_name, _ = QFileDialog.getSaveFileName(
+            self, "Save Processed Image", "",
+            "PNG Image (*.png);;JPEG Image (*.jpg);;BMP Image (*.bmp)")
+        
+        if file_name:
+            # Lưu ảnh
+            cv2.imwrite(file_name, self.processed_image)
+            self.sucess_message.show_message("Đã lưu ảnh thành công!")
 
     def _display_image(self, image: np.ndarray, image_label: QLabel):
         if image is None:
