@@ -21,7 +21,13 @@ class BaseMessage(QLabel):
         self.hide()
         
     def _get_background_color(self) -> str:
-        return "#4CAF50" if self.message_type == "success" else "#f44336"
+        """Get background color based on message type."""
+        color_map = {
+            "success": "#4CAF50",  # Green
+            "error": "#f44336",    # Red
+            "warning": "#FFD700"   # Yellow
+        }
+        return color_map.get(self.message_type, "#2196F3")  # Default blue
         
     def show_message(self, message: str):
         self.setText(message)
