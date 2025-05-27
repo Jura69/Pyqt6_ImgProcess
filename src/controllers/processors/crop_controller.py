@@ -3,11 +3,21 @@ from models.processors.crop_model import CropModel
 from views.processors.crop_view import CropView
 
 class CropController(BaseController):
-    def __init__(self):
-        models = CropModel()
-        views = CropView()
-        super().__init__(models, views) 
+    """
+    Controller for crop image processing.
+    
+    Coordinates between CropModel and CropView to handle
+    image cropping operations.
+    """
+    
+    def __init__(self) -> None:
+        """Initialize crop controller with model and view."""
+        model = CropModel()
+        view = CropView()
+        super().__init__(model, view)
 
-    def _connect_signals(self):
+    def _connect_signals(self) -> None:
+        """Connect crop-specific signals between view and model."""
         super()._connect_signals()
-        self.views.parameters_changed.connect(self.models.set_parameters)
+        if hasattr(self.view, 'parameters_changed'):
+            self.view.parameters_changed.connect(self.model.set_parameters)

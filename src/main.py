@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import QApplication
 from controllers.processors.rotation_controller import RotationController
 from controllers.processors.crop_controller import CropController
 from controllers.processors.flip_controller import FlipController
+from controllers.processors.lowpass_controller import LowpassController
 from views.main_window import MainWindow
 
 def main():
@@ -11,7 +12,8 @@ def main():
     processor_controllers = {
         "Rotation": RotationController(),
         "Crop": CropController(),
-        "Flip": FlipController()
+        "Flip": FlipController(),
+        "Lowpass Filter": LowpassController()
     }
     
     window = MainWindow(processor_controllers)

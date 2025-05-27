@@ -1,48 +1,66 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QComboBox
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
+from .base_processor_view import BaseProcessorView
+from ..components.base_input import SpinBoxInput
 
-class RotationView(QWidget):
-    parameters_changed = pyqtSignal(dict)
-    rotation_type_changed = pyqtSignal(str)
+class RotationView(BaseProcessorView):
+    rotation_type_changed = pyqtSignal(str)  # Keep this signal for controller compatibility
     
     def __init__(self):
-        super().__init__()
-        self._init_ui()
+        super().__init__("Rotation")
+        self._setup_rotation_ui()
         
-    def _init_ui(self):
-        layout = QVBoxLayout()
+    def _setup_rotation_ui(self):
+        # Create horizontal layout for inputs
+        input_layout = self._create_horizontal_layout()
+        
+        # Degree input
+        degree_container = self._create_vertical_layout()
+        degree_label = QLabel("Degree:")
+        self.degree_input = QSpinBox()
+        self.degree_input.setRange(-360, 360)  # Allow negative values for counter-clockwise
+        self.degree_input.setValue(0)
+        self.degree_input.valueChanged.connect(self._on_parameter_changed)
+        degree_container.addWidget(degree_label)
+        degree_container.addWidget(self.degree_input)
+        input_layout.addWidget(degree_container.parent())
         
         # Rotation type selection
-        type_layout = QHBoxLayout()
-        type_label = QLabel("Rotation Type:")
-        self.type_combo = QComboBox()
-        self.type_combo.addItems(["Center", "Origin"])
-        self.type_combo.currentTextChanged.connect(self._on_type_changed)
+        self.rotation_type = self._create_combobox("Rotation Type:", ["Center", "Origin"])
+        self.rotation_type.currentIndexChanged.connect(self._on_rotation_type_changed)
         
-        type_layout.addWidget(type_label)
-        type_layout.addWidget(self.type_combo)
-        layout.addLayout(type_layout)
+    def _on_rotation_type_changed(self, index: int):
+        rotation_type = "center" if index == 0 else "origin"
+        self.rotation_type_changed.emit(rotation_type)
+        self._on_parameter_changed()
         
-        # Degree selection
-        degree_layout = QHBoxLayout()
-        degree_label = QLabel("Degree:")
-        self.degree_spin = QSpinBox()
-        self.degree_spin.setRange(-360, 360)
-        self.degree_spin.setValue(0)
-        self.degree_spin.valueChanged.connect(self._on_parameters_changed)
+    def _on_parameter_changed(self):
+        parameters = self.get_parameters()
+        self._emit_parameters(parameters)
         
-        degree_layout.addWidget(degree_label)
-        degree_layout.addWidget(self.degree_spin)
-        layout.addLayout(degree_layout)
-        
-        self.setLayout(layout)
-        
-    def _on_type_changed(self, rotation_type: str):
-        self.rotation_type_changed.emit(rotation_type.lower())
-        self._on_parameters_changed()
-        
-    def _on_parameters_changed(self):
-        params = {
-            "degree": self.degree_spin.value()
+    def get_parameters(self) -> dict:
+        return {
+            "degree": self.degree_input.value(),
+            "rotation_type": "center" if self.rotation_type.currentIndex() == 0 else "origin"
         }
-        self.parameters_changed.emit(params) 
+        
+    def reset(self):
+        self.degree_input.setValue(0)
+        self.rotation_type.setCurrentIndex(0)
+        
+    def cleanup(self):
+        if hasattr(self, 'degree_input'):
+            try:
+                self.degree_input.valueChanged.disconnect()
+            except:
+                pass
+        if hasattr(self, 'rotation_type'):
+            try:
+                self.rotation_type.currentIndexChanged.disconnect()
+            except:
+                pass
+        try:
+            self.rotation_type_changed.disconnect()
+        except:
+            pass
+        super().cleanup() 

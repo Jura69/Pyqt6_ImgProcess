@@ -1,15 +1,29 @@
-from PyQt6.QtWidgets import QWidget
+from controllers.base_controller import BaseController
 from models.processors.rotation_model import RotationModel
 from views.processors.rotation_view import RotationView
-from controllers.base_controller import BaseController
 
 class RotationController(BaseController):
-    def __init__(self):
-        models = RotationModel()
-        views = RotationView()
-        super().__init__(models, views)
+    """
+    Controller for rotation image processing.
+    
+    Coordinates between RotationModel and RotationView to handle
+    image rotation operations.
+    """
+    
+    def __init__(self) -> None:
+        """Initialize rotation controller with model and view."""
+        model = RotationModel()
+        view = RotationView()
+        super().__init__(model, view)
 
-    def _connect_signals(self):
-        # Kết nối signal rotation_type_changed từ views tới models
-        self.views.rotation_type_changed.connect(self.models.set_rotation_type)
-        super()._connect_signals() 
+    def _connect_signals(self) -> None:
+        """Connect rotation-specific signals between view and model."""
+        super()._connect_signals()
+        
+        # Connect rotation type changes
+        if hasattr(self.view, 'rotation_type_changed'):
+            self.view.rotation_type_changed.connect(self.model.set_rotation_type)
+            
+        # Connect parameter changes
+        if hasattr(self.view, 'parameters_changed'):
+            self.view.parameters_changed.connect(self.model.set_parameters) 

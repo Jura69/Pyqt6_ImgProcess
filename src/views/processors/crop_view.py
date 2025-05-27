@@ -1,5 +1,7 @@
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QVBoxLayout, QLabel
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore import pyqtSignal
+from views.components.base_input import TextInput
+from views.components.error_message import ErrorMessage
 
 class CropView(QWidget):
     parameters_changed = pyqtSignal(dict)
@@ -9,62 +11,99 @@ class CropView(QWidget):
         self._setup_ui()
         
     def _setup_ui(self):
-        main_layout = QVBoxLayout(self)
-        input_layout = QHBoxLayout()
+        layout = QVBoxLayout(self)
         
-        # Tạo các trường input
-        self.start_y_input = QLineEdit()
-        self.start_y_input.setPlaceholderText("Start Y")
-        self.end_y_input = QLineEdit()
-        self.end_y_input.setPlaceholderText("End Y")
-        self.start_x_input = QLineEdit()
-        self.start_x_input.setPlaceholderText("Start X")
-        self.end_x_input = QLineEdit()
-        self.end_x_input.setPlaceholderText("End X")
+        # Title
+        title = QLabel("Crop Image")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
         
-        for input_field in [self.start_y_input, self.end_y_input, 
-                          self.start_x_input, self.end_x_input]:
-            input_field.textChanged.connect(self._on_parameter_changed)
+        # Coordinate inputs
+        coord_layout = QVBoxLayout()
         
-        # Add to layout
-        input_layout.addWidget(self.start_y_input)
-        input_layout.addWidget(self.end_y_input)
-        input_layout.addWidget(self.start_x_input)
-        input_layout.addWidget(self.end_x_input)
-        main_layout.addLayout(input_layout)
+        # X coordinates
+        x_layout = QHBoxLayout()
+        self.x1_input = TextInput("X1")
+        self.x2_input = TextInput("X2")
+        x_layout.addWidget(self.x1_input)
+        x_layout.addWidget(self.x2_input)
+        coord_layout.addLayout(x_layout)
         
-        # Label thông báo lỗi
-        self.warning_label = QLabel()
-        self.warning_label.setStyleSheet("color: red;")
-        main_layout.addWidget(self.warning_label)
+        # Y coordinates
+        y_layout = QHBoxLayout()
+        self.y1_input = TextInput("Y1")
+        self.y2_input = TextInput("Y2")
+        y_layout.addWidget(self.y1_input)
+        y_layout.addWidget(self.y2_input)
+        coord_layout.addLayout(y_layout)
         
-    def _on_parameter_changed(self):
+        layout.addLayout(coord_layout)
+        
+        # Validation message
+        self.error_message = ErrorMessage()
+        layout.addWidget(self.error_message)
+        
+        # Connect signals
+        self.x1_input.textChanged.connect(self._on_parameter_changed)
+        self.x2_input.textChanged.connect(self._on_parameter_changed)
+        self.y1_input.textChanged.connect(self._on_parameter_changed)
+        self.y2_input.textChanged.connect(self._on_parameter_changed)
+        
+    def _validate_coordinates(self) -> bool:
         try:
-            start_y = int(self.start_y_input.text())
-            end_y = int(self.end_y_input.text())
-            start_x = int(self.start_x_input.text())
-            end_x = int(self.end_x_input.text())
-            # Kiểm tra hợp lệ
-            if start_y < 0 or end_y < 0 or start_x < 0 or end_x < 0:
-                self.warning_label.setText("Tọa độ phải >= 0.")
-                return
-            if end_y <= start_y or end_x <= start_x:
-                self.warning_label.setText("End phải lớn hơn Start.")
-                return
-            self.warning_label.setText("")
-            parameters = {
-                "start_y": start_y,
-                "end_y": end_y,
-                "start_x": start_x,
-                "end_x": end_x
-            }
-            self.parameters_changed.emit(parameters)
+            x1 = int(self.x1_input.get_value())
+            x2 = int(self.x2_input.get_value())
+            y1 = int(self.y1_input.get_value())
+            y2 = int(self.y2_input.get_value())
+            
+            # Check if coordinates are positive
+            if any(coord < 0 for coord in [x1, x2, y1, y2]):
+                self.error_message.show_message("Coordinates must be positive numbers")
+                return False
+                
+            # Check if coordinates form a valid rectangle
+            if x1 >= x2:
+                self.error_message.show_message("X1 must be less than X2")
+                return False
+                
+            if y1 >= y2:
+                self.error_message.show_message("Y1 must be less than Y2")
+                return False
+                
+            self.error_message.clear_message()
+            return True
+            
         except ValueError:
-            self.warning_label.setText("Vui lòng nhập số nguyên hợp lệ.")
-            return
+            self.error_message.show_message("Please enter valid numbers")
+            return False
+            
+    def _on_parameter_changed(self):
+        if self._validate_coordinates():
+            self._emit_parameters()
+            
+    def _emit_parameters(self):
+        parameters = self.get_parameters()
+        self.parameters_changed.emit(parameters)
         
-    def set_parameters(self, parameters: dict):
-        self.start_y_input.setText(str(parameters.get("start_y", 0)))
-        self.end_y_input.setText(str(parameters.get("end_y", 0)))
-        self.start_x_input.setText(str(parameters.get("start_x", 0)))
-        self.end_x_input.setText(str(parameters.get("end_x", 0))) 
+    def get_parameters(self) -> dict:
+        try:
+            return {
+                "x1": int(self.x1_input.get_value()),
+                "x2": int(self.x2_input.get_value()),
+                "y1": int(self.y1_input.get_value()),
+                "y2": int(self.y2_input.get_value())
+            }
+        except ValueError:
+            return {
+                "x1": 0,
+                "x2": 0,
+                "y1": 0,
+                "y2": 0
+            }
+            
+    def reset(self):
+        self.x1_input.set_value("0")
+        self.x2_input.set_value("0")
+        self.y1_input.set_value("0")
+        self.y2_input.set_value("0")
+        self.error_message.clear_message() 

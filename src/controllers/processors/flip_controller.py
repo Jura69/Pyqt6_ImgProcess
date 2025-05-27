@@ -1,14 +1,23 @@
-from PyQt6.QtWidgets import QWidget
+from controllers.base_controller import BaseController
 from models.processors.flip_model import FlipModel
 from views.processors.flip_view import FlipView
-from controllers.base_controller import BaseController
 
 class FlipController(BaseController):
-    def __init__(self):
-        models = FlipModel()
-        views = FlipView()
-        super().__init__(models, views)
+    """
+    Controller for flip image processing.
+    
+    Coordinates between FlipModel and FlipView to handle
+    image flipping operations.
+    """
+    
+    def __init__(self) -> None:
+        """Initialize flip controller with model and view."""
+        model = FlipModel()
+        view = FlipView()
+        super().__init__(model, view)
 
-    def _connect_signals(self):
-        self.views.flip_type_changed.connect(self.models.set_flip_type)
+    def _connect_signals(self) -> None:
+        """Connect flip-specific signals between view and model."""
         super()._connect_signals()
+        if hasattr(self.view, 'parameters_changed'):
+            self.view.parameters_changed.connect(self.model.set_parameters)

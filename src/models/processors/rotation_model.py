@@ -1,34 +1,82 @@
 import numpy as np
 import math
 import cv2
-from typing import Tuple, Literal
+from typing import Dict, Any, Literal
+from models.base_model import BaseModel
 
-class RotationModel:
-    """Xử lý xoay ảnh."""
+class RotationModel(BaseModel):
+    """
+    Model for image rotation operations.
     
-    def __init__(self):
+    Handles rotation of images around center or origin point.
+    """
+    
+    def __init__(self) -> None:
+        """Initialize rotation model with default parameters."""
         self.rotation_type: Literal["center", "origin"] = "center"
         self.degree: float = 0.0
     
     def set_rotation_type(self, rotation_type: Literal["center", "origin"]) -> None:
-        """Chọn kiểu xoay: quanh tâm hoặc quanh gốc (0,0)."""
+        """
+        Set the rotation type.
+        
+        Args:
+            rotation_type: Type of rotation - 'center' or 'origin'
+            
+        Raises:
+            ValueError: If rotation type is invalid
+        """
         if rotation_type not in ["center", "origin"]:
-            raise ValueError("Phải chọn kiểu xoay là 'center' hoặc 'origin'")
+            raise ValueError("Rotation type must be 'center' or 'origin'")
         self.rotation_type = rotation_type
     
-    def set_parameters(self, parameters: dict) -> None:
-        """Nhận tham số góc xoay (độ)."""
-        if "degree" in parameters:
-            self.degree = float(parameters["degree"])
+    def set_parameters(self, parameters: Dict[str, Any]) -> None:
+        """
+        Set rotation parameters.
+        
+        Args:
+            parameters (Dict[str, Any]): Parameter values to set
+            
+        Raises:
+            ValueError: If parameters are invalid
+        """
+        try:
+            if "degree" in parameters:
+                self.degree = float(parameters["degree"])
+            if "rotation_type" in parameters:
+                self.set_rotation_type(parameters["rotation_type"])
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Invalid rotation parameters: {e}")
     
     def process(self, image: np.ndarray) -> np.ndarray:
-        """Xử lý ảnh với tham số hiện tại."""
+        """
+        Process the image by rotating it.
+        
+        Args:
+            image (np.ndarray): Input image to rotate
+            
+        Returns:
+            np.ndarray: Rotated image
+        """
+        if not self.validate_image(image):
+            return image
+            
         return self.rotate(image, self.degree)
     
     def rotate(self, image: np.ndarray, degree: float) -> np.ndarray:
-        """Xoay ảnh theo góc (độ)"""
+        """
+        Rotate image by specified degrees.
+        
+        Args:
+            image (np.ndarray): Input image
+            degree (float): Rotation angle in degrees
+            
+        Returns:
+            np.ndarray: Rotated image
+        """
         theta = -degree * math.pi / 180
         height, width = image.shape[:2]
+        
         if self.rotation_type == "center":
             MT1 = np.float32([
                 [1, 0, width//2],
@@ -57,7 +105,22 @@ class RotationModel:
         return rotated
     
     def get_name(self) -> str:
+        """
+        Get the display name of this processor.
+        
+        Returns:
+            str: Display name
+        """
         return "Rotation"
     
-    def get_parameters(self) -> dict:
-        return {"degree": self.degree} 
+    def get_parameters(self) -> Dict[str, Any]:
+        """
+        Get current rotation parameters.
+        
+        Returns:
+            Dict[str, Any]: Current parameter values
+        """
+        return {
+            "degree": self.degree,
+            "rotation_type": self.rotation_type
+        } 
