@@ -208,8 +208,25 @@ class MainWindowModel(QObject):
             self.processing_started.emit()
             self.logger.info(f"Processing image with {self._current_processor_name}")
             
+            # Determine the input image for processing
+            # If a processed image exists, use it for chained operations.
+            # Otherwise, use the original image.
+            input_image = self._processed_image if self._processed_image is not None else self._original_image
+            
+            if input_image is None: # Should not happen if can_process is true, but as a safeguard
+                self.error_occurred.emit("No image available for processing")
+                self.processing_finished.emit()
+                return False
+
             # Process the image
-            self._processed_image = self._current_processor.process(self._original_image)
+            processed_result = self._current_processor.process(input_image.copy()) # type: ignore
+            
+            if not self.validate_image(processed_result):
+                self.error_occurred.emit(f"Processing with {self._current_processor_name} resulted in an invalid image.")
+                self.processing_finished.emit()
+                return False
+                
+            self._processed_image = processed_result
             
             self.logger.info("Image processing completed successfully")
             self.image_processed.emit(self._processed_image)
@@ -249,13 +266,40 @@ class MainWindowModel(QObject):
                 self.logger.info(f"Image saved: {file_path}")
                 return True
             else:
-                self.error_occurred.emit(f"Failed to save image: {file_path}")
+                error_msg = f"Failed to save image: {file_path}"
+                self.logger.error(error_msg)
+                self.error_occurred.emit(error_msg)
                 return False
                 
         except Exception as e:
             error_msg = f"Error saving image: {str(e)}"
             self.logger.error(error_msg)
             self.error_occurred.emit(error_msg)
+            return False
+    
+    def reset_to_original_image(self) -> bool:
+        """
+        Resets the processed image to the original image.
+        
+        Returns:
+            bool: True if reset was successful, False otherwise.
+        """
+        if not self.has_original_image or self._original_image is None:
+            self.error_occurred.emit("No original image loaded to reset to.")
+            return False
+        
+        try:
+            self.processing_started.emit() # Optional: signal that an operation is starting
+            self._processed_image = self._original_image.copy()
+            self.logger.info("Image reset to original.")
+            self.image_processed.emit(self._processed_image) # Notify view to update with the original
+            self.processing_finished.emit() # Optional: signal that an operation finished
+            return True
+        except Exception as e:
+            error_msg = f"Error resetting image: {str(e)}"
+            self.logger.error(error_msg)
+            self.error_occurred.emit(error_msg)
+            self.processing_finished.emit() # Optional: signal that an operation finished
             return False
     
     def get_processor_names(self) -> list:

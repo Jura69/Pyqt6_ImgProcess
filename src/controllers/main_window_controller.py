@@ -83,6 +83,7 @@ class MainWindowController:
         self.view.processor_selection_changed.connect(self._on_processor_selection_changed)
         self.view.process_requested.connect(self._on_process_requested)
         self.view.save_requested.connect(self._on_save_requested)
+        self.view.reset_requested.connect(self._on_reset_requested)
         
         # Connect model signals to view updates
         self.model.image_loaded.connect(self._on_image_loaded)
@@ -159,6 +160,22 @@ class MainWindowController:
             self.view.show_success_message("Image saved successfully!")
             # Auto-clear success message after 3 seconds
             QTimer.singleShot(3000, self.view.clear_messages)
+    
+    def _on_reset_requested(self) -> None:
+        """
+        Handle reset request from view.
+        """
+        self.logger.info("Reset image requested")
+        success = self.model.reset_to_original_image()
+        if success:
+            self.view.show_success_message("Image reset to original.")
+            QTimer.singleShot(3000, self.view.clear_messages)
+            # After resetting, the processed image is now the original, so disable save button
+            # until a new processing operation occurs.
+            self.view.set_save_button_enabled(False) 
+        else:
+            # Error message is already handled by the model via error_occurred signal
+            pass # Model will emit error_occurred which _on_error_occurred handles
     
     # Model event handlers
     
@@ -239,32 +256,36 @@ class MainWindowController:
         self.logger.info("Cleaning up main window controller")
         
         # Clean up model
-        self.model.cleanup()
+        if hasattr(self.model, 'cleanup'):
+            self.model.cleanup()
         
         # Clean up view
-        self.view.cleanup()
+        if hasattr(self.view, 'cleanup'):
+            self.view.cleanup() # View handles its own signal disconnections
         
         # Clean up processor controllers
-        for controller in self.model.processor_controllers.values():
-            if hasattr(controller, 'cleanup'):
-                controller.cleanup()
+        if hasattr(self.model, 'processor_controllers'):
+            for controller in self.model.processor_controllers.values():
+                if hasattr(controller, 'cleanup'):
+                    controller.cleanup()
         
-        # Disconnect signals
+        # Disconnect signals connected by this controller to its own methods
+        # (Model signals connected to controller handlers)
         try:
-            # Disconnect view signals
-            self.view.upload_requested.disconnect()
-            self.view.processor_selection_changed.disconnect()
-            self.view.process_requested.disconnect()
-            self.view.save_requested.disconnect()
-            
-            # Disconnect model signals
-            self.model.image_loaded.disconnect()
-            self.model.image_processed.disconnect()
-            self.model.processor_changed.disconnect()
-            self.model.processing_started.disconnect()
-            self.model.processing_finished.disconnect()
-            self.model.error_occurred.disconnect()
-            
+            self.model.image_loaded.disconnect(self._on_image_loaded)
+            self.model.image_processed.disconnect(self._on_image_processed)
+            self.model.processor_changed.disconnect(self._on_processor_changed)
+            self.model.processing_started.disconnect(self._on_processing_started)
+            self.model.processing_finished.disconnect(self._on_processing_finished)
+            self.model.error_occurred.disconnect(self._on_error_occurred)
         except RuntimeError:
-            # Signals already disconnected
-            pass 
+            # Signals might have already been disconnected or were not connected
+            pass
+
+        # Restore original resizeEvent if it was replaced
+        # Assuming the original was QMainWindow.resizeEvent or similar.
+        # This is tricky; ideally, the view manages its own event handlers.
+        # For now, if we overrode it, we can try to set it back to a default
+        # or ensure the view's cleanup handles it.
+        # Given the current code, MainWindowView.resizeEvent is called directly,
+        # so specific disconnection here might not be needed if view cleans up itself. 

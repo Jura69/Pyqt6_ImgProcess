@@ -43,6 +43,7 @@ class MainWindowView(QMainWindow):
     processor_selection_changed = pyqtSignal(str)  # Emitted when processor is selected
     process_requested = pyqtSignal()  # Emitted when process button is clicked
     save_requested = pyqtSignal(str)  # Emitted when user chooses save location
+    reset_requested = pyqtSignal() # Emitted when reset button is clicked
     
     def __init__(self) -> None:
         """Initialize the main window view."""
@@ -164,7 +165,14 @@ class MainWindowView(QMainWindow):
         # Process button
         self.process_button = QPushButton("Process Image")
         self.process_button.clicked.connect(self._on_process_clicked)
+        self.process_button.setEnabled(False) # Initially disabled
         layout.addWidget(self.process_button)
+
+        # Reset button
+        self.reset_button = QPushButton("Reset Image")
+        self.reset_button.clicked.connect(self._on_reset_clicked)
+        self.reset_button.setEnabled(False) # Initially disabled
+        layout.addWidget(self.reset_button)
         
         # Save button
         self.save_button = QPushButton("Save Processed Image")
@@ -216,6 +224,12 @@ class MainWindowView(QMainWindow):
         """
         # Validate input according to standards
         if image is None or not isinstance(image, np.ndarray):
+            self.process_button.setEnabled(False)
+            self.reset_button.setEnabled(False)
+            self.save_button.setEnabled(False)
+            # Optionally clear image labels or show placeholder
+            self.original_image_label.clear()
+            self.processed_image_label.clear()
             return
         
         frame_width = self.original_frame.width() - 20
@@ -223,6 +237,14 @@ class MainWindowView(QMainWindow):
         
         display_img = image_scaling(image, max_width=frame_width, max_height=frame_height)
         self._display_image(display_img, self.original_image_label)
+        
+        # Enable process and reset buttons when original image is displayed
+        self.process_button.setEnabled(self.processor_combo.currentText() != self.DEFAULT_PROCESSOR_NAME)
+        self.reset_button.setEnabled(True)
+        # Save button remains disabled until there's a processed image
+        self.save_button.setEnabled(False) 
+        # Clear processed image display when a new original image is loaded
+        self.processed_image_label.clear()
     
     def display_processed_image(self, image: np.ndarray) -> None:
         """
@@ -233,6 +255,9 @@ class MainWindowView(QMainWindow):
         """
         # Validate input according to standards
         if image is None or not isinstance(image, np.ndarray):
+            self.save_button.setEnabled(False)
+            # Optionally clear processed image label or show placeholder
+            self.processed_image_label.clear()
             return
         
         frame_width = self.processed_frame.width() - 20
@@ -240,6 +265,10 @@ class MainWindowView(QMainWindow):
         
         display_img = image_scaling(image, max_width=frame_width, max_height=frame_height)
         self._display_image(display_img, self.processed_image_label)
+        self.save_button.setEnabled(True) # Enable save button when processed image is displayed
+        self.reset_button.setEnabled(True) # Ensure reset is available if there's a processed image
+        # Process button should still be enabled if a processor is selected
+        self.process_button.setEnabled(self.processor_combo.currentText() != self.DEFAULT_PROCESSOR_NAME)
     
     def set_processor_selection(self, processor_name: str) -> None:
         """
@@ -248,20 +277,35 @@ class MainWindowView(QMainWindow):
         Args:
             processor_name: Name of processor to select
         """
-        if processor_name == "" or processor_name == self.DEFAULT_PROCESSOR_NAME:
-            self.views_stack.setCurrentIndex(0)
-            return
+        # Block signals to prevent feedback loop if called programmatically
+        self.processor_combo.blockSignals(True)
+        current_index = self.processor_combo.findText(processor_name)
+        if current_index != -1:
+            self.processor_combo.setCurrentIndex(current_index)
+        else:
+            # If processor_name is not in combo, select default (empty)
+            default_index = self.processor_combo.findText(self.DEFAULT_PROCESSOR_NAME)
+            if default_index != -1:
+                self.processor_combo.setCurrentIndex(default_index)
+            else: # Fallback if default isn't even there (should not happen)
+                self.processor_combo.setCurrentIndex(0)
+        self.processor_combo.blockSignals(False)
         
-        # Find and set the correct view
-        processor_names = [self.processor_combo.itemText(i) for i in range(self.processor_combo.count())]
-        try:
-            if processor_name in processor_names:
-                index = processor_names.index(processor_name)
-                if index > 0:  # Skip DEFAULT_PROCESSOR_NAME
-                    self.views_stack.setCurrentIndex(index)
-        except ValueError:
-            # Processor not found, stay on empty view
-            self.views_stack.setCurrentIndex(0)
+        # Update current view in stack
+        if processor_name in self._processor_views:
+            self.views_stack.setCurrentWidget(self._processor_views[processor_name])
+        else:
+            # Select empty widget if no specific processor or default is chosen
+            # Ensure index 0 is always the placeholder/empty widget.
+            if self.views_stack.count() > 0: # Check if stack has any widgets
+                 # Assuming the first widget added is always the empty/placeholder one
+                self.views_stack.setCurrentIndex(0) 
+            
+        # Enable or disable process button based on selection and image presence
+        is_processor_selected = processor_name != self.DEFAULT_PROCESSOR_NAME
+        can_process_now = is_processor_selected and self.original_image_label.pixmap() is not None and \
+                          not self.original_image_label.pixmap().isNull()
+        self.process_button.setEnabled(can_process_now)
     
     def set_save_button_enabled(self, enabled: bool) -> None:
         """
@@ -277,12 +321,20 @@ class MainWindowView(QMainWindow):
         Set UI state during processing.
         
         Args:
-            is_processing: True to show processing state, False for normal state
+            is_processing: True if processing, False otherwise
         """
-        # Disable controls during processing
         self.upload_button.setEnabled(not is_processing)
         self.processor_combo.setEnabled(not is_processing)
-        self.process_button.setEnabled(not is_processing)
+        self.process_button.setEnabled(not is_processing and \
+                                     self.original_image_label.pixmap() is not None and \
+                                     self.processor_combo.currentText() != self.DEFAULT_PROCESSOR_NAME)
+        self.reset_button.setEnabled(not is_processing and self.original_image_label.pixmap() is not None)
+        self.save_button.setEnabled(not is_processing and self.processed_image_label.pixmap() is not None)
+        
+        # Disable processor-specific view controls if they exist and are QWidget
+        current_view_widget = self.views_stack.currentWidget()
+        if isinstance(current_view_widget, QWidget): # Check if it's a QWidget
+            current_view_widget.setEnabled(not is_processing)
         
         # Update cursor
         if is_processing:
@@ -360,6 +412,7 @@ class MainWindowView(QMainWindow):
     def _on_processor_changed(self, processor_name: str) -> None:
         """Handle processor selection change."""
         self.processor_selection_changed.emit(processor_name)
+        # The controller will call set_processor_selection, which updates the UI accordingly.
     
     def _on_process_clicked(self) -> None:
         """Handle process button click."""
@@ -367,12 +420,24 @@ class MainWindowView(QMainWindow):
     
     def _on_save_clicked(self) -> None:
         """Handle save button click."""
-        file_name, _ = QFileDialog.getSaveFileName(
-            self, "Save Processed Image", "",
-            "PNG Image (*.png);;JPEG Image (*.jpg);;BMP Image (*.bmp)")
-        
-        if file_name:
-            self.save_requested.emit(file_name)
+        # Ensure there's a processed image to save
+        if self.processed_image_label.pixmap() is None or self.processed_image_label.pixmap().isNull():
+            self.show_error_message("No processed image to save.")
+            return
+
+        # Use QFileDialog to get save path
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Processed Image",
+            "", # Default directory
+            "Images (*.png *.jpg *.jpeg *.bmp)" 
+        )
+        if file_path:
+            self.save_requested.emit(file_path)
+    
+    def _on_reset_clicked(self) -> None:
+        """Handle reset button click."""
+        self.reset_requested.emit()
     
     def resizeEvent(self, event) -> None:
         """Handle window resize event."""
@@ -381,16 +446,39 @@ class MainWindowView(QMainWindow):
         # This just calls the parent resize event
     
     def cleanup(self) -> None:
-        """Clean up view resources."""
-        # Clear processor views
-        self._processor_views.clear()
-        
-        # Disconnect signals
+        """Clean up resources, disconnect signals."""
         try:
+            # Disconnect signals to prevent errors on close
             self.upload_requested.disconnect()
             self.processor_selection_changed.disconnect()
             self.process_requested.disconnect()
             self.save_requested.disconnect()
+            self.reset_requested.disconnect() # Keep one disconnect for reset_requested
         except RuntimeError:
-            # Signals already disconnected
-            pass 
+            # Signals already disconnected or never connected
+            pass
+        
+        # Clean up message components if they exist
+        if hasattr(self, 'success_message') and self.success_message:
+            self.success_message.deleteLater()
+        if hasattr(self, 'error_message') and self.error_message:
+            self.error_message.deleteLater()
+        if hasattr(self, 'warning_message') and self.warning_message:
+            self.warning_message.deleteLater()
+
+        # Clear processor views from stack and delete them
+        if hasattr(self, 'views_stack'):
+            while self.views_stack.count() > 0:
+                widget = self.views_stack.widget(0)
+                self.views_stack.removeWidget(widget)
+                # Check if the widget is one of the processor views we stored
+                # and call its cleanup if it has one
+                for name, view_widget in list(self._processor_views.items()):
+                    if view_widget == widget:
+                        if hasattr(view_widget, 'cleanup'):
+                            view_widget.cleanup()
+                        del self._processor_views[name] # Remove from our tracking dict
+                widget.deleteLater() # Delete the widget itself
+        self._processor_views.clear()
+
+        super().close() # Ensure QMainWindow's own cleanup happens if needed 
