@@ -43,7 +43,7 @@ conda --version
 1. Clone the repository:
 ```bash
 git clone https://github.com/Jura69/Pyqt6_ImgProcess.git
-cd PyQt6-Project
+cd PyQt6_ImgProcess
 ```
 
 2. Create and activate the conda environment:
