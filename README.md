@@ -138,13 +138,6 @@ python src/main.py
 - **Multi-scale Processing** - Pyramid-based enhancement techniques
 - **Quality Preservation** - Float64 precision for minimal quality loss
 
-## Architecture
-
-- **MVC Pattern** - Model-View-Controller architecture for maintainability
-- **Modular Design** - Easy to extend with new processors
-- **Signal-Slot Communication** - Efficient event-driven updates
-- **Memory Optimization** - Smart image copying and resource management
-
 ## Requirements
 
 - Python 3.11+
