@@ -4,6 +4,7 @@ from controllers.processors.rotation_controller import RotationController
 from controllers.processors.crop_controller import CropController
 from controllers.processors.flip_controller import FlipController
 from controllers.processors.lowpass_controller import LowpassController
+from controllers.processors.object_detection_controller import ObjectDetectionController
 from controllers.main_window_controller import MainWindowController
 
 def main():
@@ -13,7 +14,8 @@ def main():
         "Rotation": RotationController(),
         "Crop": CropController(),
         "Flip": FlipController(),
-        "Lowpass Filter": LowpassController()
+        "Lowpass Filter": LowpassController(),
+        "Object Detection": ObjectDetectionController()
     }
     
     # Use the new MVC structure
